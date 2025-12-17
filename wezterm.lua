@@ -1,7 +1,7 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 
--- 1. PLUGINS: Import the Session Manager (Resurrect)
+-- 1. PLUGINS
 local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
 
 local config = wezterm.config_builder()
@@ -14,91 +14,75 @@ config.font = wezterm.font_with_fallback({
 	"FiraCode Nerd Font",
 })
 config.font_size = 14.0
-config.line_height = 1.7
-
+config.line_height = 1.8
 config.color_scheme = "Solarized Dark"
-
-config.window_background_opacity = 0.8
+config.window_background_opacity = 0.95
 config.use_fancy_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = true
-
--- NO TITLE BAR
--- "RESIZE" removes the title bar but keeps the resize borders.
 config.window_decorations = "RESIZE"
-
-config.window_padding = {
-	left = 10,
-	right = 10,
-	top = 10,
-	bottom = 0,
-}
+config.window_padding = { left = 10, right = 10, top = 10, bottom = 0 }
 
 -- =========================================================
 -- 3. SYSTEM BEHAVIOR
 -- =========================================================
 config.audible_bell = "Disabled"
 config.adjust_window_size_when_changing_font_size = false
-config.send_composed_key_when_left_alt_is_pressed = false
-config.send_composed_key_when_right_alt_is_pressed = false
+-- MacOS Specific: Use Option as Meta/Alt
+config.send_composed_key_when_left_alt_is_pressed = true
+config.send_composed_key_when_right_alt_is_pressed = true
 
 -- =========================================================
 -- 4. KEYBINDINGS
 -- =========================================================
-config.leader = { key = "p", mods = "CTRL", timeout_milliseconds = 2000 }
-
 config.keys = {
-	-- Word Jump Fix
-	{ key = "LeftArrow", mods = "OPT", action = act.SendString("\x1bb") },
-	{ key = "RightArrow", mods = "OPT", action = act.SendString("\x1bf") },
-	-- DISABLE DEFAULT KEYBINDINGS
-	-- Prevent WezTerm from eating these keys so LazyVim can use them
-	{ key = "-", mods = "CTRL", action = act.DisableDefaultAssignment },
-	{ key = "=", mods = "CTRL", action = act.DisableDefaultAssignment },
-	{ key = "0", mods = "CTRL", action = act.DisableDefaultAssignment },
+	-- ---------------------------------------------------------
+	-- MACOS SAFETY: Prevent accidental resizing
+	-- ---------------------------------------------------------
+	-- Disable Cmd +/-/0 so they don't mess up your font size randomly
+	{ key = "-", mods = "CMD", action = act.DisableDefaultAssignment },
+	{ key = "=", mods = "CMD", action = act.DisableDefaultAssignment },
+	{ key = "0", mods = "CMD", action = act.DisableDefaultAssignment },
 
-	-- SESSION MANAGEMENT (Resurrect)
+	-- ---------------------------------------------------------
+	-- PANE MODE (Cmd + p)
+	-- ---------------------------------------------------------
 	{
-		key = "W",
-		mods = "LEADER",
-		action = act.PromptInputLine({
-			description = wezterm.format({
-				{ Attribute = { Intensity = "Bold" } },
-				{ Foreground = { AnsiColor = "Fuchsia" } },
-				{ Text = "Enter name for new workspace" },
-			}),
-			action = wezterm.action_callback(function(window, pane, line)
-				-- line will be `nil` if they hit escape without entering anything
-				-- An empty string if they just hit enter
-				-- Or the actual line of text they wrote
-				if line then
-					window:perform_action(
-						act.SwitchToWorkspace({
-							name = line,
-						}),
-						pane
-					)
-				end
-			end),
+		key = "p",
+		mods = "CMD",
+		action = act.ActivateKeyTable({
+			name = "pane_mode",
+			one_shot = true,
+			timeout_milliseconds = 2000,
 		}),
 	},
+
+	-- ---------------------------------------------------------
+	-- SESSION MANAGEMENT (Cmd + Shift + Keys)
+	-- ---------------------------------------------------------
 	{
-		key = "S",
-		mods = "LEADER",
+		key = "S", -- Cmd + Shift + S (Uppercase implies Shift)
+		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
 			resurrect.save_state(resurrect.workspace_state.get_workspace_state())
+			win:perform_action(
+				act.ToastNotification({
+					title = "Session Saved",
+					content = "Workspace state saved",
+					timeout_milliseconds = 1000,
+				}),
+				pane
+			)
 		end),
 	},
 	{
-		key = "L",
-		mods = "LEADER",
+		key = "L", -- Cmd + Shift + L
+		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
 			resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
-				-- 1. Load the state from the selected file
 				local type = string.match(id, "^.+(%..+)$")
 				if type == "json" then
 					local state = resurrect.load_state(id, "workspace_state")
-					-- 2. Restore the workspace
 					resurrect.workspace_state.restore_workspace(state, {
 						window = win,
 						relative = true,
@@ -108,15 +92,13 @@ config.keys = {
 				end
 			end, {
 				title = "Load Session",
-				description = "Select session to load",
-				fuzzy_description = "Search session: ",
 				is_fuzzy = true,
 			})
 		end),
 	},
 	{
-		key = "D",
-		mods = "LEADER",
+		key = "D", -- Cmd + Shift + D
+		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
 			resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
 				id = string.match(id, "([^/]+)$")
@@ -135,36 +117,69 @@ config.keys = {
 				)
 			end, {
 				title = "Delete State",
-				description = "Select session to delete",
-				fuzzy_description = "Search session to delete: ",
 			})
 		end),
 	},
+	{
+		key = "W", -- Cmd + Shift + W
+		mods = "CMD",
+		action = act.PromptInputLine({
+			description = wezterm.format({
+				{ Attribute = { Intensity = "Bold" } },
+				{ Foreground = { AnsiColor = "Fuchsia" } },
+				{ Text = "Enter name for new workspace" },
+			}),
+			action = wezterm.action_callback(function(window, pane, line)
+				if line then
+					window:perform_action(act.SwitchToWorkspace({ name = line }), pane)
+				end
+			end),
+		}),
+	},
 
-	-- PANE: Split
-	{ key = "n", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
-	{ key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+	-- ---------------------------------------------------------
+	-- LOCK MODE (Cmd + g)
+	-- ---------------------------------------------------------
+	{
+		key = "g",
+		mods = "CMD",
+		action = act.ActivateKeyTable({
+			name = "locked_mode",
+			one_shot = false,
+			prevent_fallback = true,
+		}),
+	},
 
-	-- PANE: Navigation
-	{ key = "h", mods = "LEADER", action = act.ActivatePaneDirection("Left") },
-	{ key = "j", mods = "LEADER", action = act.ActivatePaneDirection("Down") },
-	{ key = "k", mods = "LEADER", action = act.ActivatePaneDirection("Up") },
-	{ key = "l", mods = "LEADER", action = act.ActivatePaneDirection("Right") },
+	-- ---------------------------------------------------------
+	-- TAB MODE (Cmd + t)
+	-- ---------------------------------------------------------
+	{ key = "t", mods = "CMD", action = act.ActivateKeyTable({ name = "tab_mode", one_shot = true }) },
 
-	-- PANE: Actions
-	{ key = "x", mods = "LEADER", action = act.CloseCurrentPane({ confirm = true }) },
-	{ key = "f", mods = "LEADER", action = act.TogglePaneZoomState },
-
-	-- MODES
-	{ key = "t", mods = "CTRL", action = act.ActivateKeyTable({ name = "tab_mode", one_shot = true }) },
-	{ key = "r", mods = "LEADER", action = act.ActivateKeyTable({ name = "resize_mode", one_shot = false }) },
-
+	-- ---------------------------------------------------------
 	-- UTILS
-	{ key = "c", mods = "LEADER", action = act.SpawnTab("CurrentPaneDomain") },
-	{ key = "p", mods = "LEADER", action = act.PaneSelect({ mode = "Activate" }) },
+	-- ---------------------------------------------------------
+	{ key = "LeftArrow", mods = "OPT", action = act.SendString("\x1bb") },
+	{ key = "RightArrow", mods = "OPT", action = act.SendString("\x1bf") },
 }
 
+-- =========================================================
+-- 5. KEY TABLES
+-- =========================================================
 config.key_tables = {
+	pane_mode = {
+		{ key = "n", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+		{ key = "d", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+		{ key = "h", action = act.ActivatePaneDirection("Left") },
+		{ key = "j", action = act.ActivatePaneDirection("Down") },
+		{ key = "k", action = act.ActivatePaneDirection("Up") },
+		{ key = "l", action = act.ActivatePaneDirection("Right") },
+		{ key = "x", action = act.CloseCurrentPane({ confirm = true }) },
+		{ key = "f", action = act.TogglePaneZoomState },
+		{ key = "c", action = act.SpawnTab("CurrentPaneDomain") },
+		{ key = "p", action = act.PaneSelect({ mode = "Activate" }) },
+		{ key = "r", action = act.ActivateKeyTable({ name = "resize_mode", one_shot = false }) },
+		{ key = "Escape", action = "PopKeyTable" },
+	},
 	tab_mode = {
 		{ key = "n", action = act.SpawnTab("CurrentPaneDomain") },
 		{ key = "x", action = act.CloseCurrentTab({ confirm = true }) },
@@ -190,10 +205,14 @@ config.key_tables = {
 		{ key = "j", action = act.AdjustPaneSize({ "Down", 5 }) },
 		{ key = "Escape", action = "PopKeyTable" },
 	},
+	-- UNLOCK WITH CMD + g
+	locked_mode = {
+		{ key = "g", mods = "CMD", action = act.PopKeyTable },
+	},
 }
 
 -- =========================================================
--- 5. VISUALS: Solarized Colors
+-- 6. VISUALS
 -- =========================================================
 config.colors = {
 	tab_bar = {
@@ -215,13 +234,12 @@ config.colors = {
 }
 
 -- =========================================================
--- 6. STATUS BAR
+-- 7. STATUS BAR
 -- =========================================================
 wezterm.on("update-right-status", function(window, pane)
 	local name = window:active_key_table()
 	local workspace = window:active_workspace()
 
-	-- Default colors (Solarized Dark)
 	local color = "#073642"
 	local text = ""
 	local status_icon = "  "
@@ -230,61 +248,72 @@ wezterm.on("update-right-status", function(window, pane)
 	local workspace_text_color = "#002b36"
 
 	if name == "tab_mode" then
-		name = " TAB "
+		name = " TABS "
 		color = "#268bd2"
 		text = " (n: new | x: close | r: rename | h/l: switch) "
 		status_icon = "  "
+	elseif name == "pane_mode" then
+		name = " PANES "
+		color = "#d33682"
+		text = " (n/d: split | h/j/k/l: move | x: close | r: resize) "
+		status_icon = "  "
+		workspace_color = "#d33682"
+		workspace_text_color = "#fdf6e3"
+		workspace_icon = "  "
 	elseif name == "resize_mode" then
 		name = " RESIZE "
 		color = "#cb4b16"
 		text = " (h/j/k/l: resize | Esc: exit) "
 		status_icon = "  "
-	elseif window:leader_is_active() then
-		name = " LEADER "
-		color = "#d33682"
-		text = " (S: save | L: load | n/d: split | h/j/k/l: move) "
-		status_icon = "  "
-
-		-- Optional: Change workspace color when Leader is active to highlight it
-		workspace_color = "#d33682"
-		workspace_text_color = "#fdf6e3"
-		workspace_icon = "  "
+	elseif name == "locked_mode" then
+		name = " LOCKED "
+		color = "#dc322f"
+		text = " (Cmd + g to unlock) "
+		status_icon = "  "
 	end
 
-	-- If a mode is active (Leader, Tab, Resize), show the specific status
 	if name then
 		window:set_right_status(wezterm.format({
-			-- Workspace / Session Indicator
 			{ Background = { Color = workspace_color } },
 			{ Foreground = { Color = workspace_text_color } },
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = " " .. workspace_icon .. " " .. workspace .. " " },
-
-			-- Mode Indicator (Leader/Tab/Resize)
 			{ Background = { Color = color } },
 			{ Foreground = { Color = "#fdf6e3" } },
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = status_icon .. name },
-
-			-- Helper Text
 			{ Background = { Color = "#002b36" } },
 			{ Foreground = { Color = "#839496" } },
 			{ Text = text },
 		}))
 	else
-		-- Default Status (No specific mode active)
 		window:set_right_status(wezterm.format({
-			-- Workspace / Session Indicator
 			{ Background = { Color = "#eee8d5" } },
 			{ Foreground = { Color = "#002b36" } },
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = " " .. workspace_icon .. " " .. workspace .. " " },
-
-			-- Default Help Text
 			{ Background = { Color = "#002b36" } },
 			{ Foreground = { Color = "#657b83" } },
-			{ Text = " Ctrl+p: Leader | Ctrl+t: Tabs " },
+			{ Text = " Cmd+p: Panes | Cmd+t: Tabs " },
 		}))
+	end
+end)
+
+-- =========================================================
+-- 8. STARTUP
+-- =========================================================
+wezterm.on("gui-startup", function(cmd)
+	local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
+	window:gui_window():maximize()
+
+	local state = resurrect.workspace_state.get_workspace_state()
+	if state then
+		resurrect.workspace_state.restore_workspace(resurrect.load_state(state.workspace, "workspace_state"), {
+			window = window,
+			relative = true,
+			restore_text = true,
+			on_pane_restore = resurrect.tab_state.default_on_pane_restore,
+		})
 	end
 end)
 
