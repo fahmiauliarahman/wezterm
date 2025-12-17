@@ -9,14 +9,16 @@ local config = wezterm.config_builder()
 -- =========================================================
 -- 2. APPEARANCE & FONT
 -- =========================================================
+config.front_end = "OpenGL"
+
 config.font = wezterm.font_with_fallback({
 	"JetBrainsMono Nerd Font",
 	"FiraCode Nerd Font",
 })
-config.font_size = 14.0
+config.font_size = 13.5
 config.line_height = 1.8
 config.color_scheme = "Solarized Dark"
-config.window_background_opacity = 0.95
+config.window_background_opacity = 0.8
 config.use_fancy_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = true
@@ -39,10 +41,10 @@ config.keys = {
 	-- ---------------------------------------------------------
 	-- MACOS SAFETY: Prevent accidental resizing
 	-- ---------------------------------------------------------
-	-- Disable Cmd +/-/0 so they don't mess up your font size randomly
-	{ key = "-", mods = "CMD", action = act.DisableDefaultAssignment },
-	{ key = "=", mods = "CMD", action = act.DisableDefaultAssignment },
-	{ key = "0", mods = "CMD", action = act.DisableDefaultAssignment },
+	-- Disable CTRL +/-/0 so they don't mess up your font size randomly
+	{ key = "-", mods = "CTRL", action = act.DisableDefaultAssignment },
+	{ key = "=", mods = "CTRL", action = act.DisableDefaultAssignment },
+	{ key = "0", mods = "CTRL", action = act.DisableDefaultAssignment },
 
 	-- ---------------------------------------------------------
 	-- PANE MODE (Cmd + p)
@@ -160,6 +162,19 @@ config.keys = {
 	-- ---------------------------------------------------------
 	{ key = "LeftArrow", mods = "OPT", action = act.SendString("\x1bb") },
 	{ key = "RightArrow", mods = "OPT", action = act.SendString("\x1bf") },
+
+	-- ---------------------------------------------------------
+	-- DIRECT TAB JUMP (Cmd + 1..9)
+	-- ---------------------------------------------------------
+	{ key = "1", mods = "CMD", action = act.ActivateTab(0) },
+	{ key = "2", mods = "CMD", action = act.ActivateTab(1) },
+	{ key = "3", mods = "CMD", action = act.ActivateTab(2) },
+	{ key = "4", mods = "CMD", action = act.ActivateTab(3) },
+	{ key = "5", mods = "CMD", action = act.ActivateTab(4) },
+	{ key = "6", mods = "CMD", action = act.ActivateTab(5) },
+	{ key = "7", mods = "CMD", action = act.ActivateTab(6) },
+	{ key = "8", mods = "CMD", action = act.ActivateTab(7) },
+	{ key = "9", mods = "CMD", action = act.ActivateTab(8) },
 }
 
 -- =========================================================
