@@ -72,7 +72,7 @@ config.keys = {
 		key = "S", -- Cmd + Shift + S (Uppercase implies Shift)
 		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
-			resurrect.save_state(resurrect.workspace_state.get_workspace_state())
+			resurrect.state_manager.save_state(resurrect.workspace_state.get_workspace_state())
 			win:perform_action(
 				act.ToastNotification({
 					title = "Session Saved",
@@ -88,15 +88,23 @@ config.keys = {
 		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
 			resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
-				local type = string.match(id, "^.+(%..+)$")
-				if type == "json" then
-					local state = resurrect.load_state(id, "workspace_state")
-					resurrect.workspace_state.restore_workspace(state, {
-						window = win,
-						relative = true,
-						restore_text = true,
-						on_pane_restore = resurrect.tab_state.default_on_pane_restore,
-					})
+				local type = string.match(id, "^([^/]+)")
+				id = string.match(id, "([^/]+)$")
+				id = string.match(id, "(.+)%..+$")
+				local opts = {
+					relative = true,
+					restore_text = true,
+					on_pane_restore = resurrect.tab_state.default_on_pane_restore,
+				}
+				if type == "workspace" then
+					local state = resurrect.state_manager.load_state(id, "workspace")
+					resurrect.workspace_state.restore_workspace(state, opts)
+				elseif type == "window" then
+					local state = resurrect.state_manager.load_state(id, "window")
+					resurrect.window_state.restore_window(pane:window(), state, opts)
+				elseif type == "tab" then
+					local state = resurrect.state_manager.load_state(id, "tab")
+					resurrect.tab_state.restore_tab(pane:tab(), state, opts)
 				end
 			end, {
 				title = "Load Session",
@@ -108,28 +116,18 @@ config.keys = {
 		key = "D", -- Cmd + Shift + D
 		mods = "CMD",
 		action = wezterm.action_callback(function(win, pane)
-			resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
-				id = string.match(id, "([^/]+)$")
-				id = string.match(id, "(.+)%..+$")
-				win:perform_action(
-					act.InputSelector({
-						action = wezterm.action_callback(function(_, _, line)
-							if line then
-								os.remove(wezterm.home_dir .. "/.local/share/wezterm/resurrect/" .. id .. ".json")
-							end
-						end),
-						title = "Delete State",
-						choices = { { label = "Confirm Delete: " .. label, id = "delete" } },
-					}),
-					pane
-				)
+			resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id)
+				resurrect.state_manager.delete_state(id)
 			end, {
 				title = "Delete State",
+				description = "Select State to Delete and press Enter = accept, Esc = cancel, / = filter",
+				fuzzy_description = "Search State to Delete: ",
+				is_fuzzy = true,
 			})
 		end),
 	},
 	{
-		key = "W", -- Cmd + Shift + W
+		key = "N", -- Cmd + Shift + N: Create new workspace
 		mods = "CMD",
 		action = act.PromptInputLine({
 			description = wezterm.format({
@@ -144,6 +142,22 @@ config.keys = {
 			end),
 		}),
 	},
+	{
+		key = "R", -- Cmd + Shift + R: Rename current workspace
+		mods = "CMD",
+		action = act.PromptInputLine({
+			description = wezterm.format({
+				{ Attribute = { Intensity = "Bold" } },
+				{ Foreground = { AnsiColor = "Aqua" } },
+				{ Text = "Rename current workspace" },
+			}),
+			action = wezterm.action_callback(function(window, pane, line)
+				if line then
+					wezterm.mux.rename_workspace(wezterm.mux.get_active_workspace(), line)
+				end
+			end),
+		}),
+	},
 
 	-- ---------------------------------------------------------
 	-- LOCK MODE (Cmd + g)
@@ -154,7 +168,6 @@ config.keys = {
 		action = act.ActivateKeyTable({
 			name = "locked_mode",
 			one_shot = false,
-			prevent_fallback = true,
 		}),
 	},
 
@@ -226,9 +239,25 @@ config.key_tables = {
 		{ key = "j", action = act.AdjustPaneSize({ "Down", 5 }) },
 		{ key = "Escape", action = "PopKeyTable" },
 	},
-	-- UNLOCK WITH CMD + g
+	-- UNLOCK WITH CMD + g (block all custom shortcuts)
 	locked_mode = {
 		{ key = "g", mods = "CMD", action = act.PopKeyTable },
+		{ key = "p", mods = "CMD", action = act.Nop },
+		{ key = "t", mods = "CMD", action = act.Nop },
+		{ key = "S", mods = "CMD", action = act.Nop },
+		{ key = "L", mods = "CMD", action = act.Nop },
+		{ key = "D", mods = "CMD", action = act.Nop },
+		{ key = "N", mods = "CMD", action = act.Nop },
+		{ key = "R", mods = "CMD", action = act.Nop },
+		{ key = "1", mods = "CMD", action = act.Nop },
+		{ key = "2", mods = "CMD", action = act.Nop },
+		{ key = "3", mods = "CMD", action = act.Nop },
+		{ key = "4", mods = "CMD", action = act.Nop },
+		{ key = "5", mods = "CMD", action = act.Nop },
+		{ key = "6", mods = "CMD", action = act.Nop },
+		{ key = "7", mods = "CMD", action = act.Nop },
+		{ key = "8", mods = "CMD", action = act.Nop },
+		{ key = "9", mods = "CMD", action = act.Nop },
 	},
 }
 
@@ -326,16 +355,14 @@ end)
 wezterm.on("gui-startup", function(cmd)
 	local tab, pane, window = wezterm.mux.spawn_window(cmd or {})
 	window:gui_window():maximize()
-
-	local state = resurrect.workspace_state.get_workspace_state()
-	if state then
-		resurrect.workspace_state.restore_workspace(resurrect.load_state(state.workspace, "workspace_state"), {
-			window = window,
-			relative = true,
-			restore_text = true,
-			on_pane_restore = resurrect.tab_state.default_on_pane_restore,
-		})
-	end
 end)
+
+-- Optional: Enable periodic auto-save every 5 minutes
+resurrect.state_manager.periodic_save({
+	interval_seconds = 300,
+	save_workspaces = true,
+	save_windows = false,
+	save_tabs = false,
+})
 
 return config
