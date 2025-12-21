@@ -12,13 +12,16 @@ local config = wezterm.config_builder()
 config.front_end = "OpenGL"
 
 config.font = wezterm.font_with_fallback({
-	"JetBrainsMono Nerd Font",
-	"FiraCode Nerd Font",
+	{ family = "JetBrains Mono", weight = "Bold" }, -- Primary Font, Bold Weight
+	{ family = "Fira Code iScript", weight = "Bold" }, -- Secondary Font, Bold Italic Weight
+	{ family = "BlexMono Nerd Font", weight = "Bold" }, -- IBM Plex Mono for Programming Ligatures, Bold Weight
+	{ family = "CaskaydiaCove Nerd Font", weight = "Bold" }, -- Cascadia Code for Programming Ligatures, Bold Weight
+	{ family = "Apple Color Emoji", scale = 0.8 },
 })
 config.font_size = 13.5
 config.line_height = 1.8
 config.color_scheme = "Solarized Dark"
-config.window_background_opacity = 0.8
+config.window_background_opacity = 0.75
 config.use_fancy_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = true
@@ -31,8 +34,8 @@ config.window_padding = { left = 10, right = 10, top = 10, bottom = 0 }
 config.audible_bell = "Disabled"
 config.adjust_window_size_when_changing_font_size = false
 -- MacOS Specific: Use Option as Meta/Alt
-config.send_composed_key_when_left_alt_is_pressed = true
-config.send_composed_key_when_right_alt_is_pressed = true
+config.send_composed_key_when_left_alt_is_pressed = false
+config.send_composed_key_when_right_alt_is_pressed = false
 
 -- =========================================================
 -- 4. KEYBINDINGS
@@ -45,6 +48,9 @@ config.keys = {
 	{ key = "-", mods = "CTRL", action = act.DisableDefaultAssignment },
 	{ key = "=", mods = "CTRL", action = act.DisableDefaultAssignment },
 	{ key = "0", mods = "CTRL", action = act.DisableDefaultAssignment },
+	{ key = "-", mods = "CTRL", action = act.DisableDefaultAssignment },
+	{ key = "h", mods = "OPT", action = act.DisableDefaultAssignment },
+	{ key = "i", mods = "OPT", action = act.DisableDefaultAssignment },
 
 	-- ---------------------------------------------------------
 	-- PANE MODE (Cmd + p)
