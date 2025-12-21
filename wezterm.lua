@@ -183,6 +183,12 @@ config.keys = {
 	{ key = "RightArrow", mods = "OPT", action = act.SendString("\x1bf") },
 
 	-- ---------------------------------------------------------
+	-- SCROLLING
+	-- ---------------------------------------------------------
+	{ key = "DownArrow", mods = "CMD", action = act.ScrollToBottom },
+	{ key = "UpArrow", mods = "CMD", action = act.ScrollToTop },
+
+	-- ---------------------------------------------------------
 	-- DIRECT TAB JUMP (Cmd + 1..9)
 	-- ---------------------------------------------------------
 	{ key = "1", mods = "CMD", action = act.ActivateTab(0) },
