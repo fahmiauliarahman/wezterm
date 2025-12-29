@@ -20,8 +20,8 @@ config.font = wezterm.font_with_fallback({
 })
 config.font_size = 13.5
 config.line_height = 1.8
-config.color_scheme = "Solarized Dark"
-config.window_background_opacity = 0.75
+config.color_scheme = "Catppuccin Mocha"
+config.window_background_opacity = 1
 config.use_fancy_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = true
@@ -274,17 +274,17 @@ config.colors = {
 	tab_bar = {
 		background = "rgba(0, 0, 0, 0)",
 		active_tab = {
-			bg_color = "#2aa198",
-			fg_color = "#002b36",
+			bg_color = "#cba6f7", -- Mocha Mauve
+			fg_color = "#11111b", -- Mocha Crust
 			intensity = "Bold",
 		},
 		inactive_tab = {
-			bg_color = "#073642",
-			fg_color = "#839496",
+			bg_color = "#181825", -- Mocha Mantle
+			fg_color = "#a6adc8", -- Mocha Subtext0
 		},
 		new_tab = {
 			bg_color = "rgba(0, 0, 0, 0)",
-			fg_color = "#839496",
+			fg_color = "#a6adc8", -- Mocha Subtext0
 		},
 	},
 }
@@ -296,34 +296,34 @@ wezterm.on("update-right-status", function(window, pane)
 	local name = window:active_key_table()
 	local workspace = window:active_workspace()
 
-	local color = "#073642"
+	local color = "#181825" -- Mocha Mantle
 	local text = ""
 	local status_icon = "  "
 	local workspace_icon = "  "
-	local workspace_color = "#eee8d5"
-	local workspace_text_color = "#002b36"
+	local workspace_color = "#cba6f7" -- Mocha Mauve
+	local workspace_text_color = "#11111b" -- Mocha Crust
 
 	if name == "tab_mode" then
 		name = " TABS "
-		color = "#268bd2"
+		color = "#89b4fa" -- Mocha Blue
 		text = " (n: new | x: close | r: rename | h/l: switch) "
 		status_icon = "  "
 	elseif name == "pane_mode" then
 		name = " PANES "
-		color = "#d33682"
+		color = "#f5c2e7" -- Mocha Pink
 		text = " (n/d: split | h/j/k/l: move | x: close | r: resize) "
 		status_icon = "  "
-		workspace_color = "#d33682"
-		workspace_text_color = "#fdf6e3"
+		workspace_color = "#f5c2e7" -- Mocha Pink
+		workspace_text_color = "#11111b" -- Mocha Crust
 		workspace_icon = "  "
 	elseif name == "resize_mode" then
 		name = " RESIZE "
-		color = "#cb4b16"
+		color = "#fab387" -- Mocha Peach
 		text = " (h/j/k/l: resize | Esc: exit) "
 		status_icon = "  "
 	elseif name == "locked_mode" then
 		name = " LOCKED "
-		color = "#dc322f"
+		color = "#f38ba8" -- Mocha Red
 		text = " (Cmd + g to unlock) "
 		status_icon = "  "
 	end
@@ -335,21 +335,21 @@ wezterm.on("update-right-status", function(window, pane)
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = " " .. workspace_icon .. " " .. workspace .. " " },
 			{ Background = { Color = color } },
-			{ Foreground = { Color = "#fdf6e3" } },
+			{ Foreground = { Color = "#11111b" } }, -- Mocha Crust (Text on Color)
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = status_icon .. name },
-			{ Background = { Color = "#002b36" } },
-			{ Foreground = { Color = "#839496" } },
+			{ Background = { Color = "#1e1e2e" } }, -- Mocha Base
+			{ Foreground = { Color = "#a6adc8" } }, -- Mocha Subtext0
 			{ Text = text },
 		}))
 	else
 		window:set_right_status(wezterm.format({
-			{ Background = { Color = "#eee8d5" } },
-			{ Foreground = { Color = "#002b36" } },
+			{ Background = { Color = "#cba6f7" } }, -- Mocha Mauve
+			{ Foreground = { Color = "#11111b" } }, -- Mocha Crust
 			{ Attribute = { Intensity = "Bold" } },
 			{ Text = " " .. workspace_icon .. " " .. workspace .. " " },
-			{ Background = { Color = "#002b36" } },
-			{ Foreground = { Color = "#657b83" } },
+			{ Background = { Color = "#1e1e2e" } }, -- Mocha Base
+			{ Foreground = { Color = "#9399b2" } }, -- Mocha Overlay2
 			{ Text = " Cmd+p: Panes | Cmd+t: Tabs " },
 		}))
 	end
